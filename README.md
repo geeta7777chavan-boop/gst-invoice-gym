@@ -24,7 +24,7 @@ This repository packages a real-world GST invoice processing environment for Ope
 - Hugging Face Space: [Geeta1980/gst-invoice-gym](https://huggingface.co/spaces/Geeta1980/gst-invoice-gym)
 - Runtime URL: [geeta1980-gst-invoice-gym.hf.space](https://geeta1980-gst-invoice-gym.hf.space)
 
-The deployed Space already includes the built-in OpenEnv web playground, so reviewers can inspect and interact with the environment visually without any custom UI code.
+The deployed Space includes both the default OpenEnv playground and a GST-specific custom dashboard, so reviewers can inspect and interact with the environment visually without relying only on raw JSON.
 
 ## Why this environment is useful
 
@@ -37,6 +37,7 @@ The project follows the OpenEnv simulation pattern:
 - Typed Pydantic `Action`, `Observation`, and `State` models in [models.py](/D:/openenv-invoicegym/models.py)
 - Stateful environment implementing `reset()`, `step()`, and `state` in [server/gst_invoice_gym_environment.py](/D:/openenv-invoicegym/server/gst_invoice_gym_environment.py)
 - OpenEnv FastAPI app in [server/app.py](/D:/openenv-invoicegym/server/app.py)
+- Reviewer-friendly custom web dashboard in [server/gst_invoice_dashboard.py](/D:/openenv-invoicegym/server/gst_invoice_dashboard.py)
 - Root metadata manifest in [openenv.yaml](/D:/openenv-invoicegym/openenv.yaml)
 - Root baseline script in [inference.py](/D:/openenv-invoicegym/inference.py)
 - Docker support in [Dockerfile](/D:/openenv-invoicegym/Dockerfile) and [server/Dockerfile](/D:/openenv-invoicegym/server/Dockerfile)
@@ -52,6 +53,8 @@ The environment exposes 3 deterministic tasks with easy, medium, and hard diffic
 | `hard_manual_review_needed` | hard | Detect a buyer-identity anomaly that should be escalated, not auto-rejected | `flag` |
 
 Task definitions and synthetic cases live in [task_definitions.py](/D:/openenv-invoicegym/task_definitions.py) and [data/invoices.json](/D:/openenv-invoicegym/data/invoices.json).
+
+Each task is intentionally bound to a specific deterministic invoice case so the task objective, visible scenario text, and grader ground truth cannot drift apart.
 
 ## Action space
 
@@ -139,7 +142,10 @@ Create a virtual environment and install dependencies:
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+pip install -e .
 ```
+
+The editable install exposes the `gst_invoice_gym` import path used by the Hugging Face Space quick start and the packaged Python client.
 
 Run tests:
 

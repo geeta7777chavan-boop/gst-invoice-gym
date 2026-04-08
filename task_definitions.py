@@ -57,6 +57,7 @@ class TaskSpec:
     objective: str
     grader_description: str
     default_case_id: str
+    allowed_case_ids: tuple[str, ...]
     max_steps: int
 
 
@@ -74,6 +75,7 @@ TASKS = {
             "recommended checks, and selecting reject."
         ),
         default_case_id="GST-002",
+        allowed_case_ids=("GST-002",),
         max_steps=4,
     ),
     "medium_tax_regime_mismatch": TaskSpec(
@@ -89,6 +91,7 @@ TASKS = {
             "math, and choosing reject."
         ),
         default_case_id="GST-003",
+        allowed_case_ids=("GST-003",),
         max_steps=5,
     ),
     "hard_manual_review_needed": TaskSpec(
@@ -104,6 +107,7 @@ TASKS = {
             "recommended checks, and selecting flag for review."
         ),
         default_case_id="GST-005",
+        allowed_case_ids=("GST-005",),
         max_steps=6,
     ),
 }
@@ -149,6 +153,12 @@ def get_task(task_id: str) -> TaskSpec:
 def get_case(task_id: str, case_id: str | None = None) -> InvoiceCase:
     task = get_task(task_id)
     resolved_case_id = case_id or task.default_case_id
+    allowed_case_ids = set(task.allowed_case_ids) or {task.default_case_id}
+    if resolved_case_id not in allowed_case_ids:
+        raise ValueError(
+            f"case_id '{resolved_case_id}' is not valid for task_id '{task_id}'. "
+            f"Allowed case ids: {sorted(allowed_case_ids)}"
+        )
     if resolved_case_id not in CASES:
         raise ValueError(f"Unknown case_id '{resolved_case_id}'.")
     return CASES[resolved_case_id]
@@ -225,6 +235,7 @@ def task_catalog() -> list[dict[str, object]]:
                 "objective": task.objective,
                 "grader_description": task.grader_description,
                 "default_case_id": task.default_case_id,
+                "allowed_case_ids": list(task.allowed_case_ids),
                 "max_steps": task.max_steps,
                 "available_actions": AVAILABLE_COMMANDS,
             }

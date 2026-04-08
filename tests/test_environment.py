@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 # Allow running this file directly from the tests directory.
@@ -52,6 +53,13 @@ def test_direct_environment_medium_task_scores_in_range() -> None:
     assert observation.done is True
     assert observation.task_score == 1.0
     assert 0.0 <= observation.grader_score <= 1.0
+
+
+def test_direct_environment_rejects_task_case_mismatch() -> None:
+    env = GSTInvoiceGymEnvironment()
+
+    with pytest.raises(ValueError, match="not valid for task_id"):
+        env.reset(task_id="easy_invalid_supplier", case_id="GST-006")
 
 
 def test_fastapi_http_endpoints_expose_openenv_contract() -> None:

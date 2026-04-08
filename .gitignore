@@ -5,3 +5,5 @@ __pycache__/
 .openenv_scaffold/
 .uv-cache/
 pytest-cache-files-*/
+.tmp/
+*.egg-info/
