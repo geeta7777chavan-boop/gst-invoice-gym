@@ -1,0 +1,309 @@
+[
+  {
+    "invoice_id": "GST-001",
+    "difficulty": "easy",
+    "scenario": "Clean interstate B2B invoice with correct IGST and complete metadata.",
+    "visible_fields": {
+      "taxable_amount": 100000.0,
+      "declared_cgst": 0.0,
+      "declared_sgst": 0.0,
+      "declared_igst": 18000.0,
+      "line_item_count": 3,
+      "invoice_age_days": 2,
+      "supplier_state_code": 27,
+      "buyer_state_code": 29,
+      "total_amount": 118000.0
+    },
+    "hidden_checks": {
+      "supplier_identity": {
+        "passed": true,
+        "message": "Supplier GSTIN checksum and PAN linkage are valid.",
+        "severity": "none"
+      },
+      "buyer_identity": {
+        "passed": true,
+        "message": "Buyer GSTIN is valid for a B2B invoice.",
+        "severity": "none"
+      },
+      "tax_regime": {
+        "passed": true,
+        "message": "Interstate supply correctly uses IGST.",
+        "severity": "none"
+      },
+      "tax_math": {
+        "passed": true,
+        "message": "Declared tax matches 18 percent GST on taxable value.",
+        "severity": "none"
+      },
+      "mandatory_fields": {
+        "passed": true,
+        "message": "Invoice number, date, GSTINs, and totals are all present.",
+        "severity": "none"
+      }
+    },
+    "compliance_issues": [],
+    "recommended_checks": [
+      "tax_regime",
+      "tax_math",
+      "mandatory_fields"
+    ],
+    "correct_decision": "approve"
+  },
+  {
+    "invoice_id": "GST-002",
+    "difficulty": "easy",
+    "scenario": "Supplier GSTIN checksum fails even though the tax values look plausible.",
+    "visible_fields": {
+      "taxable_amount": 45000.0,
+      "declared_cgst": 4050.0,
+      "declared_sgst": 4050.0,
+      "declared_igst": 0.0,
+      "line_item_count": 2,
+      "invoice_age_days": 1,
+      "supplier_state_code": 27,
+      "buyer_state_code": 27,
+      "total_amount": 53100.0
+    },
+    "hidden_checks": {
+      "supplier_identity": {
+        "passed": false,
+        "message": "Supplier GSTIN is malformed and does not pass checksum validation.",
+        "severity": "critical"
+      },
+      "buyer_identity": {
+        "passed": true,
+        "message": "Buyer GSTIN is valid.",
+        "severity": "none"
+      },
+      "tax_regime": {
+        "passed": true,
+        "message": "Intrastate supply correctly uses CGST and SGST.",
+        "severity": "none"
+      },
+      "tax_math": {
+        "passed": true,
+        "message": "Tax totals are arithmetically correct.",
+        "severity": "none"
+      },
+      "mandatory_fields": {
+        "passed": true,
+        "message": "Mandatory header fields are present.",
+        "severity": "none"
+      }
+    },
+    "compliance_issues": [
+      "supplier_gstin_invalid"
+    ],
+    "recommended_checks": [
+      "supplier_identity",
+      "mandatory_fields"
+    ],
+    "correct_decision": "reject"
+  },
+  {
+    "invoice_id": "GST-003",
+    "difficulty": "medium",
+    "scenario": "Interstate invoice is incorrectly taxed as intrastate using CGST and SGST.",
+    "visible_fields": {
+      "taxable_amount": 80000.0,
+      "declared_cgst": 7200.0,
+      "declared_sgst": 7200.0,
+      "declared_igst": 0.0,
+      "line_item_count": 4,
+      "invoice_age_days": 3,
+      "supplier_state_code": 27,
+      "buyer_state_code": 33,
+      "total_amount": 94400.0
+    },
+    "hidden_checks": {
+      "supplier_identity": {
+        "passed": true,
+        "message": "Supplier GST registration is valid.",
+        "severity": "none"
+      },
+      "buyer_identity": {
+        "passed": true,
+        "message": "Buyer GST registration is valid.",
+        "severity": "none"
+      },
+      "tax_regime": {
+        "passed": false,
+        "message": "Interstate transaction should use IGST instead of CGST and SGST.",
+        "severity": "critical"
+      },
+      "tax_math": {
+        "passed": false,
+        "message": "Tax split is mathematically inconsistent with the expected tax regime.",
+        "severity": "critical"
+      },
+      "mandatory_fields": {
+        "passed": true,
+        "message": "Mandatory fields are present.",
+        "severity": "none"
+      }
+    },
+    "compliance_issues": [
+      "wrong_tax_regime",
+      "tax_components_mismatch"
+    ],
+    "recommended_checks": [
+      "tax_regime",
+      "tax_math"
+    ],
+    "correct_decision": "reject"
+  },
+  {
+    "invoice_id": "GST-004",
+    "difficulty": "medium",
+    "scenario": "Invoice header is missing mandatory document identifiers despite correct amounts.",
+    "visible_fields": {
+      "taxable_amount": 62000.0,
+      "declared_cgst": 5580.0,
+      "declared_sgst": 5580.0,
+      "declared_igst": 0.0,
+      "line_item_count": 5,
+      "invoice_age_days": 5,
+      "supplier_state_code": 29,
+      "buyer_state_code": 29,
+      "total_amount": 73160.0
+    },
+    "hidden_checks": {
+      "supplier_identity": {
+        "passed": true,
+        "message": "Supplier GST registration is valid.",
+        "severity": "none"
+      },
+      "buyer_identity": {
+        "passed": true,
+        "message": "Buyer GST registration is valid.",
+        "severity": "none"
+      },
+      "tax_regime": {
+        "passed": true,
+        "message": "Tax regime selection is correct for an intrastate invoice.",
+        "severity": "none"
+      },
+      "tax_math": {
+        "passed": true,
+        "message": "Tax totals are internally consistent.",
+        "severity": "none"
+      },
+      "mandatory_fields": {
+        "passed": false,
+        "message": "Invoice number and transport reference are missing from the document header.",
+        "severity": "critical"
+      }
+    },
+    "compliance_issues": [
+      "missing_invoice_number",
+      "missing_transport_reference"
+    ],
+    "recommended_checks": [
+      "mandatory_fields",
+      "supplier_identity"
+    ],
+    "correct_decision": "reject"
+  },
+  {
+    "invoice_id": "GST-005",
+    "difficulty": "hard",
+    "scenario": "Buyer GSTIN is one digit off, so the invoice should be flagged for manual confirmation.",
+    "visible_fields": {
+      "taxable_amount": 27500.0,
+      "declared_cgst": 2475.0,
+      "declared_sgst": 2475.0,
+      "declared_igst": 0.0,
+      "line_item_count": 2,
+      "invoice_age_days": 1,
+      "supplier_state_code": 19,
+      "buyer_state_code": 19,
+      "total_amount": 32450.0
+    },
+    "hidden_checks": {
+      "supplier_identity": {
+        "passed": true,
+        "message": "Supplier GSTIN is valid.",
+        "severity": "none"
+      },
+      "buyer_identity": {
+        "passed": false,
+        "message": "Buyer GSTIN checksum fails; this should be verified with the counterparty.",
+        "severity": "major"
+      },
+      "tax_regime": {
+        "passed": true,
+        "message": "Tax components match an intrastate invoice.",
+        "severity": "none"
+      },
+      "tax_math": {
+        "passed": true,
+        "message": "Tax values are correct.",
+        "severity": "none"
+      },
+      "mandatory_fields": {
+        "passed": true,
+        "message": "Mandatory fields are complete.",
+        "severity": "none"
+      }
+    },
+    "compliance_issues": [
+      "buyer_gstin_needs_review"
+    ],
+    "recommended_checks": [
+      "buyer_identity",
+      "mandatory_fields"
+    ],
+    "correct_decision": "flag"
+  },
+  {
+    "invoice_id": "GST-006",
+    "difficulty": "hard",
+    "scenario": "Interstate tax has a small rounding delta that should be flagged rather than auto-rejected.",
+    "visible_fields": {
+      "taxable_amount": 9999.5,
+      "declared_cgst": 0.0,
+      "declared_sgst": 0.0,
+      "declared_igst": 1799.0,
+      "line_item_count": 1,
+      "invoice_age_days": 0,
+      "supplier_state_code": 24,
+      "buyer_state_code": 32,
+      "total_amount": 11798.5
+    },
+    "hidden_checks": {
+      "supplier_identity": {
+        "passed": true,
+        "message": "Supplier GST registration is valid.",
+        "severity": "none"
+      },
+      "buyer_identity": {
+        "passed": true,
+        "message": "Buyer GST registration is valid.",
+        "severity": "none"
+      },
+      "tax_regime": {
+        "passed": true,
+        "message": "Interstate tax regime is correct.",
+        "severity": "none"
+      },
+      "tax_math": {
+        "passed": false,
+        "message": "Declared IGST differs from the expected amount by a minor rounding variance.",
+        "severity": "major"
+      },
+      "mandatory_fields": {
+        "passed": true,
+        "message": "Mandatory invoice fields are present.",
+        "severity": "none"
+      }
+    },
+    "compliance_issues": [
+      "minor_tax_rounding_delta"
+    ],
+    "recommended_checks": [
+      "tax_math",
+      "tax_regime"
+    ],
+    "correct_decision": "flag"
+  }
+]

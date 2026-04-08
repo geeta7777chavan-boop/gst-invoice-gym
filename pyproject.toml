@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openenv-gst-invoice-gym"
+version = "0.1.0"
+description = "OpenEnv GST invoice processing and compliance environment"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.26.0",
+    "openai>=2.30.0",
+    "openenv-core[core]>=0.2.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[project.scripts]
+server = "gst_invoice_gym.server.app:main"
+
+[tool.setuptools]
+include-package-data = true
+packages = ["gst_invoice_gym", "gst_invoice_gym.server"]
+package-dir = { "gst_invoice_gym" = ".", "gst_invoice_gym.server" = "server" }

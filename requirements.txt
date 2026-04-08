@@ -1,0 +1,7 @@
+gymnasium>=0.29.0
+numpy>=1.26.0
+openai>=2.30.0
+openenv-core[core]>=0.2.2
+pytest>=8.0.0
+
+# pip install git+https://github.com/meta-pytorch/OpenEnv.git   ← Add this if needed after checking Discord
