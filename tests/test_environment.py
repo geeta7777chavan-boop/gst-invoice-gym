@@ -65,6 +65,10 @@ def test_direct_environment_rejects_task_case_mismatch() -> None:
 def test_fastapi_http_endpoints_expose_openenv_contract() -> None:
     client = TestClient(app)
 
+    root_response = client.get("/", follow_redirects=False)
+    assert root_response.status_code in {302, 307}
+    assert root_response.headers["location"] == "/web"
+
     health_response = client.get("/health")
     assert health_response.status_code == 200
     assert health_response.json()["status"] == "healthy"

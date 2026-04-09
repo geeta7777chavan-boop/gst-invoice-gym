@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from fastapi.responses import RedirectResponse
 from task_definitions import ALL_CHECKS, AVAILABLE_COMMANDS, task_catalog
 
 try:
@@ -33,8 +34,8 @@ app = create_app(
 
 
 @app.get("/")
-def root() -> dict[str, str]:
-    return {"message": "GST Invoice OpenEnv server is running."}
+def root() -> RedirectResponse:
+    return RedirectResponse(url="/web")
 
 
 @app.get("/tasks")

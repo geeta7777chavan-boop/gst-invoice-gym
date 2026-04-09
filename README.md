@@ -5,6 +5,7 @@ colorFrom: blue
 colorTo: green
 sdk: docker
 app_port: 8000
+base_path: /web
 short_description: OpenEnv GST invoice compliance environment.
 tags:
   - openenv
