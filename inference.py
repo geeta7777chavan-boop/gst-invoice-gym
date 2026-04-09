@@ -29,11 +29,19 @@ class TaskRun:
 
 
 def print_task_header(task_id: str, invoice_id: str, difficulty: str) -> None:
-    print()
-    print("=" * 72)
-    print(f"Task: {task_id}")
-    print(f"Invoice: {invoice_id} | Difficulty: {difficulty}")
-    print("-" * 72)
+    print(flush=True)
+    print("=" * 72, flush=True)
+    print(f"Task: {task_id}", flush=True)
+    print(f"Invoice: {invoice_id} | Difficulty: {difficulty}", flush=True)
+    print("-" * 72, flush=True)
+
+
+def print_structured_start(task_id: str, invoice_id: str, difficulty: str) -> None:
+    print(
+        f"[START] task={task_id} task_id={task_id} "
+        f"invoice_id={invoice_id} difficulty={difficulty}",
+        flush=True,
+    )
 
 
 def print_step_line(
@@ -53,35 +61,71 @@ def print_step_line(
         f"grader={grader_score:>4.2f} "
         f"task={task_score:>4.2f} "
         f"done={'yes' if done else 'no ':<3} "
-        f"policy={policy}"
+        f"policy={policy}",
+        flush=True,
+    )
+
+
+def print_structured_step(
+    *,
+    task_id: str,
+    step_index: int,
+    command: str,
+    reward: float,
+    grader_score: float,
+    task_score: float,
+    done: bool,
+    policy: str,
+) -> None:
+    print(
+        f"[STEP] task={task_id} task_id={task_id} step={step_index} "
+        f"command={command} reward={reward:.2f} grader_score={grader_score:.2f} "
+        f"task_score={task_score:.2f} done={'true' if done else 'false'} "
+        f"policy={policy}",
+        flush=True,
     )
 
 
 def print_task_footer(score: float, steps: int, final_decision: str | None) -> None:
-    print("-" * 72)
+    print("-" * 72, flush=True)
     print(
         f"Result: score={score:.2f} | steps={steps} | "
-        f"final_decision={final_decision or 'none'}"
+        f"final_decision={final_decision or 'none'}",
+        flush=True,
+    )
+
+
+def print_structured_end(
+    task_id: str,
+    score: float,
+    steps: int,
+    final_decision: str | None,
+) -> None:
+    print(
+        f"[END] task={task_id} task_id={task_id} score={score:.2f} "
+        f"steps={steps} final_decision={final_decision or 'none'}",
+        flush=True,
     )
 
 
 def print_summary(runs: list[TaskRun], average_score: float) -> None:
-    print()
-    print("=" * 72)
-    print("Summary")
-    print("-" * 72)
-    print(f"{'Task':<32} {'Score':>7} {'Steps':>7} {'Decision':>16}")
-    print("-" * 72)
+    print(flush=True)
+    print("=" * 72, flush=True)
+    print("Summary", flush=True)
+    print("-" * 72, flush=True)
+    print(f"{'Task':<32} {'Score':>7} {'Steps':>7} {'Decision':>16}", flush=True)
+    print("-" * 72, flush=True)
     for run in runs:
         print(
             f"{run.task_id:<32} "
             f"{run.score:>7.2f} "
             f"{run.steps:>7} "
-            f"{(run.final_decision or 'none'):>16}"
+            f"{(run.final_decision or 'none'):>16}",
+            flush=True,
         )
-    print("-" * 72)
-    print(f"{'Average score':<32} {average_score:>7.2f}")
-    print("=" * 72)
+    print("-" * 72, flush=True)
+    print(f"{'Average score':<32} {average_score:>7.2f}", flush=True)
+    print("=" * 72, flush=True)
 
 
 def build_client() -> OpenAI | None:
@@ -195,6 +239,7 @@ def run_task(env: GSTInvoiceGymEnv, client: OpenAI | None, task_id: str) -> Task
     observation = result.observation
 
     print_task_header(task_id, observation.invoice_id, observation.difficulty)
+    print_structured_start(task_id, observation.invoice_id, observation.difficulty)
 
     final_decision: str | None = None
     steps_taken = 0
@@ -215,12 +260,23 @@ def run_task(env: GSTInvoiceGymEnv, client: OpenAI | None, task_id: str) -> Task
             done=result.done,
             policy=policy,
         )
+        print_structured_step(
+            task_id=task_id,
+            step_index=step_index,
+            command=command,
+            reward=float(result.reward or 0.0),
+            grader_score=observation.grader_score,
+            task_score=observation.task_score,
+            done=result.done,
+            policy=policy,
+        )
 
         if result.done:
             final_decision = observation.final_decision
             break
 
     print_task_footer(observation.task_score, steps_taken, final_decision)
+    print_structured_end(task_id, observation.task_score, steps_taken, final_decision)
 
     return TaskRun(
         task_id=task_id,
@@ -253,8 +309,8 @@ def main() -> None:
             for run in runs
         ],
     }
-    print()
-    print(json.dumps(summary, indent=2))
+    print(flush=True)
+    print(json.dumps(summary, indent=2), flush=True)
 
 
 if __name__ == "__main__":
