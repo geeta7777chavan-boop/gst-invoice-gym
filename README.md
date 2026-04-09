@@ -191,15 +191,23 @@ Project-specific helper routes:
 
 ## Baseline inference
 
-The required baseline script is [inference.py](/D:/openenv-invoicegym/inference.py). It uses the OpenAI client when these environment variables are present:
+The required baseline script is [inference.py](/D:/openenv-invoicegym/inference.py). It uses the OpenAI client only through the injected LiteLLM proxy and reads these validator-facing environment variables:
 
 - `API_BASE_URL`
-- `MODEL_NAME`
 - `API_KEY`
 
-Compatibility note:
+Compatibility fallback:
 
-- `OPENAI_API_KEY` and `HF_TOKEN` are still accepted as local fallbacks, but the validator-facing path now prefers `API_KEY` exactly as the platform injects it.
+- `HF_TOKEN` is accepted as a proxy-key alias when `API_KEY` is absent, but the script still sends requests only to `API_BASE_URL`.
+
+Optional model hint variables:
+
+- `MODEL_NAME`
+- `OPENAI_MODEL`
+- `OPENENV_MODEL`
+- `LITELLM_MODEL`
+
+If no model hint is provided, the script first asks the proxy for available models and then falls back to common LiteLLM-compatible model ids. This keeps the baseline on the provided proxy instead of calling OpenAI, Groq, or Hugging Face directly.
 
 Optional local server override:
 
@@ -211,7 +219,7 @@ Run it after starting the server:
 python inference.py
 ```
 
-If model credentials are unavailable, the script falls back to a deterministic heuristic policy so the environment can still be smoke-tested locally.
+If the proxy variables are unavailable, the script falls back to a deterministic heuristic policy so the environment can still be smoke-tested locally.
 
 ### Reproducible baseline scores
 

@@ -12,11 +12,17 @@ from task_definitions import AVAILABLE_COMMANDS, CHECK_COMMANDS, TASKS
 
 DEFAULT_ENV_BASE_URL = os.environ.get("OPENENV_BASE_URL", "http://localhost:8000")
 API_BASE_URL = os.environ.get("API_BASE_URL")
-MODEL_NAME = os.environ.get("MODEL_NAME")
-PROXY_API_KEY = os.environ.get("API_KEY")
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-LEGACY_HF_TOKEN = os.environ.get("HF_TOKEN")
-API_KEY = PROXY_API_KEY or OPENAI_API_KEY or LEGACY_HF_TOKEN
+MODEL_ENV_KEYS = ("MODEL_NAME", "OPENAI_MODEL", "OPENENV_MODEL", "LITELLM_MODEL")
+MODEL_NAME = next((os.environ.get(key) for key in MODEL_ENV_KEYS if os.environ.get(key)), None)
+API_KEY = os.environ.get("API_KEY") or os.environ.get("HF_TOKEN")
+DEFAULT_MODEL_CANDIDATES = (
+    "openai/gpt-4.1-mini",
+    "gpt-4.1-mini",
+    "openai/gpt-4o-mini",
+    "gpt-4o-mini",
+)
+DISCOVERED_MODEL_NAMES: list[str] | None = None
+RESOLVED_MODEL_NAME: str | None = MODEL_NAME
 MAX_STEPS = 6
 TEMPERATURE = 0.0
 
@@ -130,9 +136,42 @@ def print_summary(runs: list[TaskRun], average_score: float) -> None:
 
 
 def build_client() -> OpenAI | None:
-    if not API_BASE_URL or not MODEL_NAME or not API_KEY:
+    if not API_BASE_URL or not API_KEY:
         return None
     return OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+
+
+def discover_model_names(client: OpenAI) -> list[str]:
+    global DISCOVERED_MODEL_NAMES
+
+    if DISCOVERED_MODEL_NAMES is not None:
+        return DISCOVERED_MODEL_NAMES
+
+    discovered: list[str] = []
+    try:
+        models_page = client.models.list()
+        for model in getattr(models_page, "data", []):
+            model_id = getattr(model, "id", None)
+            if isinstance(model_id, str) and model_id and model_id not in discovered:
+                discovered.append(model_id)
+    except Exception:  # noqa: BLE001
+        discovered = []
+
+    DISCOVERED_MODEL_NAMES = discovered
+    return DISCOVERED_MODEL_NAMES
+
+
+def iter_model_candidates(client: OpenAI) -> list[str]:
+    candidates: list[str] = []
+    for model_name in (
+        RESOLVED_MODEL_NAME,
+        MODEL_NAME,
+        *discover_model_names(client),
+        *DEFAULT_MODEL_CANDIDATES,
+    ):
+        if isinstance(model_name, str) and model_name and model_name not in candidates:
+            candidates.append(model_name)
+    return candidates
 
 
 def parse_command(text: str) -> str | None:
@@ -184,6 +223,8 @@ def model_command(
     client: OpenAI | None,
     observation: GSTInvoiceObservation,
 ) -> tuple[str, str]:
+    global RESOLVED_MODEL_NAME
+
     if client is None:
         return fallback_command(observation), "deterministic_baseline"
 
@@ -202,34 +243,44 @@ def model_command(
         "last_feedback": observation.last_feedback,
     }
 
-    try:
-        completion = client.chat.completions.create(
-            model=MODEL_NAME,
-            temperature=TEMPERATURE,
-            max_tokens=80,
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are controlling a GST invoice compliance environment. "
-                        "Return only JSON in the form "
-                        '{"command":"<one-supported-command>","reason":"short reason"}'
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": json.dumps(prompt),
-                },
-            ],
-        )
-        response_text = completion.choices[0].message.content or ""
-        parsed = parse_command(response_text)
-        if parsed is not None:
-            return parsed, "model"
-    except Exception as exc:  # noqa: BLE001
+    last_error: Exception | None = None
+    for model_name in iter_model_candidates(client):
+        try:
+            completion = client.chat.completions.create(
+                model=model_name,
+                temperature=TEMPERATURE,
+                max_tokens=80,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are controlling a GST invoice compliance environment. "
+                            "Return only JSON in the form "
+                            '{"command":"<one-supported-command>","reason":"short reason"}'
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": json.dumps(prompt),
+                    },
+                ],
+            )
+            response_text = completion.choices[0].message.content or ""
+            parsed = parse_command(response_text)
+            if parsed is not None:
+                RESOLVED_MODEL_NAME = model_name
+                return parsed, "model"
+            return (
+                fallback_command(observation),
+                "deterministic_baseline_after_unparsed_output",
+            )
+        except Exception as exc:  # noqa: BLE001
+            last_error = exc
+
+    if last_error is not None:
         return (
             fallback_command(observation),
-            f"deterministic_baseline_after_{type(exc).__name__.lower()}",
+            f"deterministic_baseline_after_{type(last_error).__name__.lower()}",
         )
 
     return fallback_command(observation), "deterministic_baseline_after_unparsed_output"
