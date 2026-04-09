@@ -38,26 +38,30 @@ def _list_markdown(title: str, values: list[Any]) -> str:
     return f"**{title}:** {rendered}"
 
 
-def _history_markdown(web_manager: Any) -> str:
+def _bullet_block(title: str, values: list[Any]) -> str:
+    if not values:
+        return f"**{title}**\n\n- _None_"
+    bullet_lines = "\n".join(f"- `{value}`" for value in values)
+    return f"**{title}**\n\n{bullet_lines}"
+
+
+def _history_rows(web_manager: Any) -> list[list[str]]:
     logs = getattr(getattr(web_manager, "episode_state", None), "action_logs", []) or []
     if not logs:
-        return "No actions taken yet."
+        return []
 
-    lines = [
-        "| Step | Action | Reward | Done |",
-        "| --- | --- | ---: | --- |",
-    ]
+    rows: list[list[str]] = []
     for entry in logs[-10:]:
         action = getattr(entry, "action", {}) or {}
         action_name = action.get("command") or action.get("message") or json.dumps(action)
         reward = _format_scalar(getattr(entry, "reward", None))
         done = "yes" if getattr(entry, "done", False) else "no"
         step_count = getattr(entry, "step_count", "?")
-        lines.append(f"| {step_count} | `{action_name}` | {reward} | {done} |")
-    return "\n".join(lines)
+        rows.append([str(step_count), str(action_name), reward, done])
+    return rows
 
 
-def _render_dashboard(data: dict[str, Any], web_manager: Any, status_text: str) -> tuple[str, str, list[list[str]], list[list[str]], str, str, str, str, str]:
+def _render_dashboard(data: dict[str, Any], web_manager: Any, status_text: str) -> tuple[str, str, list[list[str]], list[list[str]], str, list[list[str]], str, str, str]:
     observation = data.get("observation", {}) or {}
     state = web_manager.get_state()
 
@@ -93,30 +97,32 @@ def _render_dashboard(data: dict[str, Any], web_manager: Any, status_text: str) 
         ]
     )
 
-    guidance_md = "\n".join(
+    available_actions = observation.get("available_actions", []) or []
+    inspection_actions = [
+        action for action in available_actions if str(action).startswith("check_")
+    ]
+    decision_actions = [
+        action for action in available_actions if not str(action).startswith("check_")
+    ]
+    guidance_md = "\n\n".join(
         [
             "### Guidance",
-            "",
-            _list_markdown(
+            _bullet_block(
                 "Recommended checks",
                 observation.get("recommended_checks", []) or [],
             ),
-            "",
-            _list_markdown(
+            _bullet_block(
                 "Detected issues",
                 observation.get("compliance_issues_found", []) or [],
             ),
-            "",
-            _list_markdown(
-                "Available actions",
-                observation.get("available_actions", []) or [],
-            ),
+            _bullet_block("Inspection actions", inspection_actions),
+            _bullet_block("Decision actions", decision_actions),
         ]
     )
 
     invoice_rows = _mapping_rows(observation.get("invoice_features", {}) or {})
     check_rows = _mapping_rows(observation.get("check_status", {}) or {})
-    history_md = _history_markdown(web_manager)
+    history_rows = _history_rows(web_manager)
     response_json = json.dumps(data, indent=2)
     state_json = json.dumps(state, indent=2)
 
@@ -126,21 +132,21 @@ def _render_dashboard(data: dict[str, Any], web_manager: Any, status_text: str) 
         invoice_rows,
         check_rows,
         guidance_md,
-        history_md,
+        history_rows,
         response_json,
         state_json,
         status_text,
     )
 
 
-def _empty_dashboard(message: str) -> tuple[str, str, list[list[str]], list[list[str]], str, str, str, str, str]:
+def _empty_dashboard(message: str) -> tuple[str, str, list[list[str]], list[list[str]], str, list[list[str]], str, str, str]:
     return (
         "## GST Review Snapshot",
         "### Metrics",
         [],
         [],
         "### Guidance",
-        "No actions taken yet.",
+        [],
         "",
         "",
         message,
@@ -226,7 +232,14 @@ def build_gst_dashboard(
                     reset_btn = gr.Button("Reset")
                     state_btn = gr.Button("Get State")
                 status = gr.Textbox(label="Status", interactive=False)
-                history = gr.Markdown(value="No actions taken yet.")
+                history = gr.Dataframe(
+                    headers=["Step", "Action", "Reward", "Done"],
+                    datatype=["str", "str", "str", "str"],
+                    interactive=False,
+                    wrap=True,
+                    label="Action history",
+                    value=[],
+                )
 
             with gr.Column(scale=2):
                 overview = gr.Markdown(value="## GST Review Snapshot")
