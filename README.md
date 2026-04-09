@@ -84,7 +84,7 @@ Each `GSTInvoiceObservation` contains:
 - `compliance_issues_found`
 - `last_feedback`
 - `grader_score`: deterministic score for the latest action in the range `0.0` to `1.0`
-- `task_score`: current normalized task score in the range `0.0` to `1.0`
+- `task_score`: current normalized task score in the open interval `(0.0, 1.0)`, using `0.01` as the minimum active score and `0.99` as the maximum perfect score
 - `final_decision`
 - `steps_remaining`
 
@@ -109,7 +109,7 @@ The normalized final task score is:
 + 0.15 * issue_detection
 ```
 
-All grader-facing scores are clipped to the `0.0` to `1.0` range.
+Check-level grader scores stay in the `0.0` to `1.0` range. Task-level scores are clipped to the open interval `(0.0, 1.0)` so validators never see exact `0.0` or `1.0` task results.
 
 ## Reward logic
 
@@ -120,7 +120,7 @@ The environment provides shaped step rewards plus a terminal reward:
 - `0.25` for completing a recommended check that passes
 - `0.10` for completing a non-recommended check that passes
 - `0.00` for repeating a check
-- Terminal reward equals the normalized final task score in the range `0.0` to `1.0`
+- Terminal reward equals the normalized final task score in the open interval `(0.0, 1.0)`
 - Timeout episodes receive only a small capped partial credit signal
 
 This gives the agent meaningful feedback over the full trajectory instead of only at episode end.
@@ -228,10 +228,10 @@ Using the built-in deterministic fallback policy with `seed=11`, the expected sc
 
 | Task ID | Score |
 | --- | --- |
-| `easy_invalid_supplier` | `1.00` |
-| `medium_tax_regime_mismatch` | `1.00` |
-| `hard_manual_review_needed` | `1.00` |
-| Average | `1.00` |
+| `easy_invalid_supplier` | `0.99` |
+| `medium_tax_regime_mismatch` | `0.99` |
+| `hard_manual_review_needed` | `0.99` |
+| Average | `0.99` |
 
 ## Docker
 

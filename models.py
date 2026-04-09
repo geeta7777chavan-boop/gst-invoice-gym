@@ -76,7 +76,11 @@ class GSTInvoiceObservation(Observation):
         default=0.0,
         ge=0.0,
         le=1.0,
-        description="Current task completion score in the 0.0 to 1.0 range.",
+        description=(
+            "Current task completion score in the open interval (0.0, 1.0). "
+            "The environment uses 0.01 as the minimum active score and 0.99 "
+            "as the maximum perfect score."
+        ),
     )
     final_decision: str | None = Field(
         default=None,
@@ -111,7 +115,9 @@ class GSTInvoiceState(State):
         default=0.0,
         ge=0.0,
         le=1.0,
-        description="Current normalized task score.",
+        description=(
+            "Current normalized task score in the open interval (0.0, 1.0)."
+        ),
     )
     total_reward: float = Field(
         default=0.0,

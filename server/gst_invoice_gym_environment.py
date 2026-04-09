@@ -11,7 +11,9 @@ try:
         AVAILABLE_COMMANDS,
         CHECK_COMMANDS,
         DECISION_COMMANDS,
+        MIN_TASK_SCORE,
         TASKS,
+        _open_interval_score,
         build_invoice_features,
         coverage_ratio,
         detection_ratio,
@@ -27,7 +29,9 @@ except ImportError:
         AVAILABLE_COMMANDS,
         CHECK_COMMANDS,
         DECISION_COMMANDS,
+        MIN_TASK_SCORE,
         TASKS,
+        _open_interval_score,
         build_invoice_features,
         coverage_ratio,
         detection_ratio,
@@ -55,7 +59,7 @@ class GSTInvoiceGymEnvironment(
         self._completed_checks: set[str] = set()
         self._detected_issue_checks: set[str] = set()
         self._final_decision: str | None = None
-        self._task_score = 0.0
+        self._task_score = MIN_TASK_SCORE
         self._total_reward = 0.0
         self._last_feedback = "Reset the environment to start a task."
         self._state = GSTInvoiceState(
@@ -84,7 +88,7 @@ class GSTInvoiceGymEnvironment(
         self._completed_checks = set()
         self._detected_issue_checks = set()
         self._final_decision = None
-        self._task_score = 0.0
+        self._task_score = MIN_TASK_SCORE
         self._total_reward = 0.0
         self._last_feedback = self._current_task.objective
         self._state = GSTInvoiceState(
@@ -96,7 +100,7 @@ class GSTInvoiceGymEnvironment(
             completed_checks=[],
             detected_issue_checks=[],
             final_decision=None,
-            task_score=0.0,
+            task_score=MIN_TASK_SCORE,
             total_reward=0.0,
             steps_remaining=self._current_task.max_steps,
             last_feedback=self._last_feedback,
@@ -203,7 +207,7 @@ class GSTInvoiceGymEnvironment(
             done = True
             grader_score = 0.0
             reward = round(min(0.20, self._task_score * 0.20), 2)
-            self._task_score = reward
+            self._task_score = _open_interval_score(reward)
             self._last_feedback = (
                 "Episode terminated because the agent did not make a final "
                 "approve, reject, or flag decision in time."

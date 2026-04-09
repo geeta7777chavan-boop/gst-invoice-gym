@@ -3,7 +3,13 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi.responses import RedirectResponse
-from task_definitions import ALL_CHECKS, AVAILABLE_COMMANDS, task_catalog
+from task_definitions import (
+    ALL_CHECKS,
+    AVAILABLE_COMMANDS,
+    MAX_TASK_SCORE,
+    MIN_TASK_SCORE,
+    task_catalog,
+)
 
 try:
     from openenv.core.env_server.http_server import create_app
@@ -43,7 +49,12 @@ def tasks() -> dict[str, Any]:
     return {
         "tasks": task_catalog(),
         "grader_contract": {
-            "score_range": [0.0, 1.0],
+            "task_score_interval": {
+                "min_exclusive": 0.0,
+                "max_exclusive": 1.0,
+                "examples": [MIN_TASK_SCORE, MAX_TASK_SCORE],
+            },
+            "grader_score_range": [0.0, 1.0],
             "weights": {
                 "final_decision_accuracy": 0.60,
                 "recommended_check_coverage": 0.25,
@@ -70,7 +81,11 @@ def grader_spec() -> dict[str, Any]:
         "observation_fields": {
             "check_status": "Per-check pass/fail/unknown status",
             "grader_score": "Latest action score between 0.0 and 1.0",
-            "task_score": "Current normalized task score between 0.0 and 1.0",
+            "task_score": (
+                f"Current normalized task score in the open interval "
+                f"({0.0}, {1.0}), typically between {MIN_TASK_SCORE:.2f} "
+                f"and {MAX_TASK_SCORE:.2f}."
+            ),
             "final_decision": "approve, reject, or flag once chosen",
         },
         "action_space": AVAILABLE_COMMANDS,

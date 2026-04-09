@@ -142,6 +142,18 @@ def load_cases() -> dict[str, InvoiceCase]:
 CASES = load_cases()
 
 
+MIN_TASK_SCORE = 0.01
+MAX_TASK_SCORE = 0.99
+
+
+def _open_interval_score(score: float) -> float:
+    if score <= 0.0:
+        return MIN_TASK_SCORE
+    if score >= 1.0:
+        return MAX_TASK_SCORE
+    return round(score, 2)
+
+
 def get_task(task_id: str) -> TaskSpec:
     if task_id not in TASKS:
         raise ValueError(
@@ -206,7 +218,8 @@ def progress_score(
 ) -> float:
     coverage = coverage_ratio(case, completed_checks)
     detection = detection_ratio(case, detected_checks)
-    return round(min(1.0, 0.55 * coverage + 0.45 * detection), 2)
+    score = min(1.0, 0.55 * coverage + 0.45 * detection)
+    return _open_interval_score(score)
 
 
 def final_task_score(
@@ -221,7 +234,7 @@ def final_task_score(
     score = 0.60 * decision_score + 0.25 * coverage + 0.15 * detection
     if decision == "approve" and case.correct_decision != "approve":
         score -= 0.10
-    return round(max(0.0, min(1.0, score)), 2)
+    return _open_interval_score(max(0.0, min(1.0, score)))
 
 
 def task_catalog() -> list[dict[str, object]]:

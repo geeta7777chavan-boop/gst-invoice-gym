@@ -22,7 +22,7 @@ def test_direct_environment_easy_task_reaches_full_score() -> None:
     observation = env.reset(task_id="easy_invalid_supplier", seed=7)
     assert observation.task_id == "easy_invalid_supplier"
     assert observation.invoice_id == "GST-002"
-    assert observation.task_score == 0.0
+    assert 0.0 < observation.task_score < 1.0
 
     observation = env.step(GSTInvoiceAction(command="check_supplier_identity"))
     assert observation.grader_score == 1.0
@@ -36,8 +36,8 @@ def test_direct_environment_easy_task_reaches_full_score() -> None:
     observation = env.step(GSTInvoiceAction(command="reject"))
     assert observation.done is True
     assert observation.final_decision == "reject"
-    assert observation.task_score == 1.0
-    assert observation.reward == 1.0
+    assert observation.task_score == 0.99
+    assert observation.reward == 0.99
 
 
 def test_direct_environment_medium_task_scores_in_range() -> None:
@@ -51,7 +51,7 @@ def test_direct_environment_medium_task_scores_in_range() -> None:
         observation = env.step(GSTInvoiceAction(command=command))
 
     assert observation.done is True
-    assert observation.task_score == 1.0
+    assert observation.task_score == 0.99
     assert 0.0 <= observation.grader_score <= 1.0
 
 
@@ -60,6 +60,24 @@ def test_direct_environment_rejects_task_case_mismatch() -> None:
 
     with pytest.raises(ValueError, match="not valid for task_id"):
         env.reset(task_id="easy_invalid_supplier", case_id="GST-006")
+
+
+def test_task_score_stays_in_open_interval_for_reset_and_timeout() -> None:
+    env = GSTInvoiceGymEnvironment()
+
+    observation = env.reset(task_id="easy_invalid_supplier", seed=13)
+    assert 0.0 < observation.task_score < 1.0
+
+    for command in (
+        "check_buyer_identity",
+        "check_tax_regime",
+        "check_tax_math",
+        "check_mandatory_fields",
+    ):
+        observation = env.step(GSTInvoiceAction(command=command))
+
+    assert observation.done is True
+    assert 0.0 < observation.task_score < 1.0
 
 
 def test_fastapi_http_endpoints_expose_openenv_contract() -> None:
@@ -88,7 +106,12 @@ def test_fastapi_http_endpoints_expose_openenv_contract() -> None:
     assert tasks_response.status_code == 200
     tasks_payload = tasks_response.json()
     assert len(tasks_payload["tasks"]) >= 3
-    assert tasks_payload["grader_contract"]["score_range"] == [0.0, 1.0]
+    assert tasks_payload["grader_contract"]["task_score_interval"] == {
+        "min_exclusive": 0.0,
+        "max_exclusive": 1.0,
+        "examples": [0.01, 0.99],
+    }
+    assert tasks_payload["grader_contract"]["grader_score_range"] == [0.0, 1.0]
 
     reset_response = client.post(
         "/reset",
@@ -147,7 +170,7 @@ def test_websocket_session_preserves_trajectory_state() -> None:
         websocket.send_json({"type": "step", "data": {"command": "flag_for_review"}})
         done_message = websocket.receive_json()
         assert done_message["data"]["done"] is True
-        assert done_message["data"]["observation"]["task_score"] == 1.0
+        assert done_message["data"]["observation"]["task_score"] == 0.99
         assert done_message["data"]["observation"]["final_decision"] == "flag"
 
 
