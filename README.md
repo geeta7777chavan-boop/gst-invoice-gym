@@ -195,11 +195,11 @@ The required baseline script is [inference.py](/D:/openenv-invoicegym/inference.
 
 - `API_BASE_URL`
 - `MODEL_NAME`
-- `OPENAI_API_KEY`
+- `API_KEY`
 
 Compatibility note:
 
-- `HF_TOKEN` is still accepted as a fallback because some hackathon instructions use that variable name, but `OPENAI_API_KEY` is the preferred name for local use.
+- `OPENAI_API_KEY` and `HF_TOKEN` are still accepted as local fallbacks, but the validator-facing path now prefers `API_KEY` exactly as the platform injects it.
 
 Optional local server override:
 

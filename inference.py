@@ -13,9 +13,10 @@ from task_definitions import AVAILABLE_COMMANDS, CHECK_COMMANDS, TASKS
 DEFAULT_ENV_BASE_URL = os.environ.get("OPENENV_BASE_URL", "http://localhost:8000")
 API_BASE_URL = os.environ.get("API_BASE_URL")
 MODEL_NAME = os.environ.get("MODEL_NAME")
+PROXY_API_KEY = os.environ.get("API_KEY")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 LEGACY_HF_TOKEN = os.environ.get("HF_TOKEN")
-API_KEY = OPENAI_API_KEY or LEGACY_HF_TOKEN
+API_KEY = PROXY_API_KEY or OPENAI_API_KEY or LEGACY_HF_TOKEN
 MAX_STEPS = 6
 TEMPERATURE = 0.0
 
