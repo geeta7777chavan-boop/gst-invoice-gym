@@ -5,6 +5,11 @@ from typing import Any
 
 import gradio as gr
 
+try:
+    from ..task_definitions import TASKS
+except ImportError:
+    from task_definitions import TASKS
+
 
 def _labelize(value: str) -> str:
     return value.replace("_", " ").title()
@@ -45,6 +50,56 @@ def _bullet_block(title: str, values: list[Any]) -> str:
     return f"**{title}**\n\n{bullet_lines}"
 
 
+def _task_catalog_markdown(active_task_id: str | None) -> str:
+    lines = ["## Task Ladder", ""]
+    for task in TASKS.values():
+        marker = ">>" if task.task_id == active_task_id else "-"
+        lines.extend(
+            [
+                f"{marker} **{task.difficulty.title()}**: `{task.task_id}`",
+                f"Title: {task.title}",
+                f"Goal: {task.objective}",
+                f"Max steps: `{task.max_steps}` | Default case: `{task.default_case_id}`",
+                "",
+            ]
+        )
+    return "\n".join(lines).strip()
+
+
+def _reward_guide_markdown(
+    reward: str,
+    grader_score: str,
+    task_score: str,
+    done: str,
+    final_decision: str,
+) -> str:
+    return "\n".join(
+        [
+            "## Reward Guide",
+            "",
+            f"**Current step reward:** `{reward}`",
+            f"**Current grader score:** `{grader_score}`",
+            f"**Current task score:** `{task_score}`",
+            f"**Episode done:** `{done}` | **Final decision:** `{final_decision}`",
+            "",
+            "**How rewards work**",
+            "",
+            "- `0.60` for finding a failing recommended check",
+            "- `0.50` for finding a failing non-recommended check",
+            "- `0.25` for completing a recommended check that passes",
+            "- `0.10` for completing a non-recommended check that passes",
+            "- `0.00` for repeating a check",
+            "- Terminal reward equals the final task score, capped at `0.99`",
+            "",
+            "**Current benchmark scope**",
+            "",
+            "- India-only GST benchmark",
+            "- Covers Indian GST identity, tax-regime, tax-math, and mandatory-field checks",
+            "- Does not yet model VAT/GST rules for other countries",
+        ]
+    )
+
+
 def _history_rows(web_manager: Any) -> list[list[str]]:
     logs = getattr(getattr(web_manager, "episode_state", None), "action_logs", []) or []
     if not logs:
@@ -61,7 +116,7 @@ def _history_rows(web_manager: Any) -> list[list[str]]:
     return rows
 
 
-def _render_dashboard(data: dict[str, Any], web_manager: Any, status_text: str) -> tuple[str, str, list[list[str]], list[list[str]], str, list[list[str]], str, str, str]:
+def _render_dashboard(data: dict[str, Any], web_manager: Any, status_text: str) -> tuple[str, str, str, list[list[str]], list[list[str]], str, list[list[str]], str, str, str]:
     observation = data.get("observation", {}) or {}
     state = web_manager.get_state()
 
@@ -96,6 +151,14 @@ def _render_dashboard(data: dict[str, Any], web_manager: Any, status_text: str) 
             f"| `{reward}` | `{done}` | `{grader_score}` | `{task_score}` | `{final_decision}` | `{steps_remaining}` |",
         ]
     )
+    task_catalog_md = _task_catalog_markdown(observation.get("task_id"))
+    reward_guide_md = _reward_guide_markdown(
+        reward=reward,
+        grader_score=grader_score,
+        task_score=task_score,
+        done=done,
+        final_decision=final_decision,
+    )
 
     available_actions = observation.get("available_actions", []) or []
     inspection_actions = [
@@ -129,9 +192,11 @@ def _render_dashboard(data: dict[str, Any], web_manager: Any, status_text: str) 
     return (
         overview_md,
         metrics_md,
+        task_catalog_md,
         invoice_rows,
         check_rows,
         guidance_md,
+        reward_guide_md,
         history_rows,
         response_json,
         state_json,
@@ -139,13 +204,15 @@ def _render_dashboard(data: dict[str, Any], web_manager: Any, status_text: str) 
     )
 
 
-def _empty_dashboard(message: str) -> tuple[str, str, list[list[str]], list[list[str]], str, list[list[str]], str, str, str]:
+def _empty_dashboard(message: str) -> tuple[str, str, str, list[list[str]], list[list[str]], str, list[list[str]], str, str, str]:
     return (
         "## GST Review Snapshot",
         "### Metrics",
+        _task_catalog_markdown(None),
         [],
         [],
         "### Guidance",
+        _reward_guide_markdown("-", "-", "-", "no", "pending"),
         [],
         "",
         "",
@@ -214,6 +281,7 @@ def build_gst_dashboard(
                     through the raw JSON every time.
                     """
                 )
+                task_catalog = gr.Markdown(value=_task_catalog_markdown(None))
                 if quick_start_md:
                     with gr.Accordion("Quick Start", open=False):
                         gr.Markdown(quick_start_md)
@@ -245,6 +313,9 @@ def build_gst_dashboard(
                 overview = gr.Markdown(value="## GST Review Snapshot")
                 metrics = gr.Markdown(value="### Metrics")
                 guidance = gr.Markdown(value="### Guidance")
+                reward_guide = gr.Markdown(
+                    value=_reward_guide_markdown("-", "-", "-", "no", "pending")
+                )
                 with gr.Row():
                     invoice_features = gr.Dataframe(
                         headers=["Invoice field", "Value"],
@@ -277,9 +348,11 @@ def build_gst_dashboard(
             outputs=[
                 overview,
                 metrics,
+                task_catalog,
                 invoice_features,
                 check_status,
                 guidance,
+                reward_guide,
                 history,
                 response_json,
                 state_json,
@@ -292,9 +365,11 @@ def build_gst_dashboard(
             outputs=[
                 overview,
                 metrics,
+                task_catalog,
                 invoice_features,
                 check_status,
                 guidance,
+                reward_guide,
                 history,
                 response_json,
                 state_json,

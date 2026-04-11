@@ -20,6 +20,8 @@ tags:
 
 This repository packages a real-world GST invoice processing environment for OpenEnv. The agent reviews structured invoice data, runs targeted compliance checks, and decides whether to `approve`, `reject`, or `flag_for_review` a document. The environment is fully synthetic, deterministic, and self-contained, so it is reproducible inside Docker and suitable for automated evaluation.
 
+Current jurisdiction scope: this benchmark is intentionally focused on **Indian GST workflows only**. It does not currently model VAT/GST rules for other countries.
+
 ## Live Space
 
 - Hugging Face Space: [Geeta1980/gst-invoice-gym](https://huggingface.co/spaces/Geeta1980/gst-invoice-gym)
