@@ -417,33 +417,44 @@ def build_gst_dashboard(
             )
 
     async def step_dashboard(
+        task_id: str,
         command: str,
         notes: str,
         scoreboard: dict[str, dict[str, str]],
     ):
+        selected_task_id = task_id or task_choices[0]
         current_task_id = web_manager.get_state().get("task_id")
         if not command:
             return _empty_dashboard(
                 "Please choose a command before stepping.",
                 scoreboard=scoreboard,
-                active_task_id=current_task_id,
+                active_task_id=current_task_id or selected_task_id,
             )
         action_data = {"command": command}
         if notes and notes.strip():
             action_data["notes"] = notes.strip()
         try:
+            active_scoreboard = scoreboard or _build_scoreboard()
+            status_prefix = ""
+            if current_task_id != selected_task_id:
+                active_scoreboard = _update_scoreboard_for_reset(
+                    active_scoreboard,
+                    selected_task_id,
+                )
+                await web_manager.reset_environment({"task_id": selected_task_id})
+                status_prefix = f"Auto-reset to `{selected_task_id}`. "
             data = await web_manager.step_environment(action_data)
             return _render_dashboard(
                 data,
                 web_manager,
-                f"Executed `{command}` successfully.",
-                scoreboard or _build_scoreboard(),
+                f"{status_prefix}Executed `{command}` successfully.",
+                active_scoreboard,
             )
         except Exception as exc:  # pragma: no cover
             return _empty_dashboard(
                 f"Error: {exc}",
                 scoreboard=scoreboard,
-                active_task_id=current_task_id,
+                active_task_id=current_task_id or selected_task_id,
             )
 
     def state_only():
@@ -571,7 +582,7 @@ def build_gst_dashboard(
         )
         step_btn.click(
             fn=step_dashboard,
-            inputs=[command, notes, scoreboard_state],
+            inputs=[task_selector, command, notes, scoreboard_state],
             outputs=[
                 overview,
                 metrics,
