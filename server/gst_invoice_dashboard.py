@@ -580,6 +580,25 @@ def build_gst_dashboard(
                 scoreboard_state,
             ],
         )
+        task_selector.change(
+            fn=reset_dashboard,
+            inputs=[task_selector, scoreboard_state],
+            outputs=[
+                overview,
+                metrics,
+                task_catalog,
+                invoice_features,
+                check_status,
+                guidance,
+                reward_guide,
+                performance_board,
+                history,
+                response_json,
+                state_json,
+                status,
+                scoreboard_state,
+            ],
+        )
         step_btn.click(
             fn=step_dashboard,
             inputs=[task_selector, command, notes, scoreboard_state],
